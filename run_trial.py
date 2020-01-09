@@ -1,10 +1,13 @@
 import pickle
 import datetime
 import os
+import sys
 from eqp.network import Network
 
+assert sys.argv[1] == '-f'
+
 settings_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'settings')
-settings_name = 'settings.pickle'
+settings_name = sys.argv[2]
 with open(os.path.join(settings_path, settings_name), 'rb') as F:
 	Settings = pickle.load(F)
 

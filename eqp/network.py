@@ -127,7 +127,6 @@ class Network:
 		for i, j, k in zip(self.layer_indices[:-2], self.layer_indices[1:-1], self.layer_indices[2:]):
 			conn = np.zeros(W.shape, dtype=np.bool_)
 			conn[j:k, i:j] = True
-			conn[i:j, j:k] = True
 			interlayer_connections.append(conn)
 		for conn in interlayer_connections:
 			W_mask[conn] = 1
@@ -209,7 +208,7 @@ class Network:
 		self.interlayer_connections = [torch.from_numpy(conn).float().to(self.device).unsqueeze(0)
 									   for conn in interlayer_connections]
 		assert self.W.norm() == (self.W*self.W_mask).norm()
-		assert (self.W = (self.W.tril() + self.W.tril().transpose(1,2))).norm() == 0
+		assert (self.W - (self.W.tril() + self.W.tril().transpose(1,2))).norm() == 0
 		assert self.W.norm() != 0
 	
 	def __initialize_biases(self):
