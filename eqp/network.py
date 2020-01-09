@@ -39,7 +39,7 @@ class Network:
 		else:
 			self.dataset =   dataset(self.batch_size, self.device, self.n_train, self.n_test)
 		print('\tUsing %s dataset.'%self.dataset.name)
-		print('\tDone. Time taken: %.03f seconds.'%(time.time()-t_0))
+		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
 		
 		assert self.weight_type in ['layered', 'smallworld add', 'smallworld replace']
 		assert not(self.n_train%self.batch_size)
@@ -101,7 +101,7 @@ class Network:
 		print('Initializing weight matrix.')
 		t_0 = time.time()
 		self.__initialize_weight_matrix()
-		print('\tDone. Time taken: %.03f minutes.'%((time.time()-t_0)/60))
+		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
 		self.__initialize_biases()
 		
 	def __initialize_state(self):
@@ -127,6 +127,7 @@ class Network:
 		for i, j, k in zip(self.layer_indices[:-2], self.layer_indices[1:-1], self.layer_indices[2:]):
 			conn = np.zeros(W.shape, dtype=np.bool_)
 			conn[j:k, i:j] = True
+			conn[i:j, j:k] = True
 			interlayer_connections.append(conn)
 		for conn in interlayer_connections:
 			W_mask[conn] = 1
@@ -207,6 +208,9 @@ class Network:
 		self.W_mask = torch.from_numpy(W_mask).float().to(self.device).unsqueeze(0)
 		self.interlayer_connections = [torch.from_numpy(conn).float().to(self.device).unsqueeze(0)
 									   for conn in interlayer_connections]
+		assert self.W.norm() == (self.W*self.W_mask).norm()
+		assert (self.W = (self.W.tril() + self.W.tril().transpose(1,2))).norm() == 0
+		assert self.W.norm() != 0
 	
 	def __initialize_biases(self):
 		self.B = torch.zeros(self.s.shape).to(self.device)
@@ -307,6 +311,18 @@ class Network:
 		self.B += dB
 		
 		return [n_right, layer_corrections]
+
+	def __format_time(self, time):
+		if time<1:
+			return '%.03fmsec'%(time*1000)
+		elif 1<=time<60:
+			return '%.03fsec'%(time)
+		elif 60<=time<60**2:
+			return '%.03fmin'%(time/60)
+		elif 60**2<=time:
+			return '%.03fhr'%(time/60**2)
+		else:
+			assert False
 		
 	def train_epoch(self, measure_classerror=False, measure_perlayer=False, perlayer_batchperiod=0):
 		assert perlayer_batchperiod<self.n_train/self.batch_size
@@ -321,9 +337,9 @@ class Network:
 				training_error += n_right
 			if measure_perlayer and not(batch%perlayer_batchperiod):
 				for pair in range(len(layer_corrections)):
-					perlayer_corrections[pair] = layer_corrections[pair]
-		assert torch.norm(network.W - (torch.tril(network.W, diag=-1) + torch.tril(network.W, diag=-1).transpose(1, 2))) == 0
-		print('\tDone. Time taken: %.03f minutes.'%((time.time()-t_0)/60))
+					perlayer_corrections[pair].append(layer_corrections[pair])
+		assert torch.norm(self.W - (torch.tril(self.W, diagonal=-1) + torch.tril(self.W, diagonal=-1).transpose(1, 2))) == 0
+		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
 		if measure_classerror:
 			training_error = 1-(training_error/self.n_train)
 			print('\tTraining error: %.04f%%.'%(100*training_error))
@@ -338,10 +354,10 @@ class Network:
 			self.__set_x_state(x)
 			if self.pparts:
 				self.use_persistant_particle(index)
-			self.evolve_to_equilibrium('free')
+			self.__evolve_to_equilibrium('free')
 			training_error += int(torch.eq(torch.argmax(network.s[:, network.iy], dim=1), torch.argmax(y, dim=1)).sum())
 		training_error = 1-(training_error/self.n_train)
-		print('\tDone. Time taken: %.03f minutes.'%((time.time()-t_0)/60))
+		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
 		print('\tTraining error: %.04f%%.'%(100*training_error))
 		return training_error
 		
@@ -354,9 +370,9 @@ class Network:
 			self.__set_x_state(x)
 			if self.pparts:
 				self.__use_persistant_particle(index)
-			self.evolve_to_equilibrium('free')
-			test_error += int(torch.eq(torch.argmax(network.s[:, network.iy], dim=1), torch.argmax(y, dim=1)).sum())
+			self.__evolve_to_equilibrium('free')
+			test_error += int(torch.eq(torch.argmax(self.s[:, self.iy], dim=1), torch.argmax(y, dim=1)).sum())
 		test_error = 1-(test_error/self.n_test)
-		print('\tDone. Time taken: %.03f minutes.'%((time.time()-t_0)/60))
+		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
 		print('\tTest error: %.04f%%.'%(100*test_error))
 		return test_error

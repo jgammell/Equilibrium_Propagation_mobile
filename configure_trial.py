@@ -9,7 +9,7 @@ topology = \
 {
 	'layer sizes':                 [28**2, 500, 500, 500, 10],
 	  # Number of neurons in each layer, from input to output.
-	'type':                        'layered',
+	'type':                        'smallworld replace',
   	  # Which network topology to use.
 	  #   'layered': the topology used in Scellier's paper. Full connectivity
 	  #     between adjacent layers, no connectivity within layers and no bypass
@@ -44,13 +44,13 @@ hyperparameters = \
 }
 configuration = \
 {
-	'epochs':                      200,
+	'epochs':                      1,
 	  # Number of epochs for which to train the network.
 	'batch size':                  20,
 	  # Number of input-output pairs with which network will train simultaneously during each batch.
 	'seed':                        0,
 	  # Random seed to initialize numpy and pytorch random number generators.
-	'device':                      'cpu',
+	'device':                      'cuda:0',
 	  # Device on which dataset and network state and weight matrices will be loaded and operated on.
 	'dtype':                       torch.float,
 	  # Data type with which to represent dataset and network state and weight matrices.
