@@ -121,15 +121,17 @@ class Network:
 		self.persistant_particles[index] = self.s[:, self.ihy].clone()
 	
 	def __initialize_weight_matrix(self):
+		self.rng = np.random.RandomState(seed=self.seed)
 		W = np.zeros((self.num_neurons, self.num_neurons), dtype=np.float32)
 		W_mask = np.zeros((self.num_neurons, self.num_neurons), dtype=np.float32)
 		interlayer_connections = []
 		for i, j, k in zip(self.layer_indices[:-2], self.layer_indices[1:-1], self.layer_indices[2:]):
-			conn = np.zeros(W.shape, dtype=np.bool_)
+			conn = np.zeros(W.shape, dtype=np.int32)
 			conn[j:k, i:j] = True
+			conn[i:j, j:k] = True
 			interlayer_connections.append(conn)
 		for conn in interlayer_connections:
-			W_mask[conn] = 1
+			W_mask += conn
 			
 		if self.weight_type=='layered':
 			pass
@@ -155,7 +157,7 @@ class Network:
 				W_mask[i:j, i:j] = 1
 			
 			# Initialize non-interlayer connection weights
-			W = np.random.uniform(low=-self.bypass_mag, high=self.bypass_mag, size=(self.num_neurons, self.num_neurons))
+			W = np.asarray(self.rng.uniform(low=-self.bypass_mag, high=self.bypass_mag, size=(self.num_neurons, self.num_neurons)))
 			
 		elif self.weight_type=='smallworld replace':
 			# List out potential locations for bypass connections
@@ -189,11 +191,16 @@ class Network:
 				potential_conn_indices[new_location_index] = existing_conn
 				
 			# Initialize non-interlayer connection weights
-			W = np.random.uniform(low=-self.bypass_mag, high=self.bypass_mag, size=(self.num_neurons, self.num_neurons))
+			W = np.asarray(self.rng.uniform(low=-self.bypass_mag, high=self.bypass_mag, size=(self.num_neurons, self.num_neurons)))
 				
 		#Glorot-Bengio weight initialization
 		for conn, n_in, n_out in zip(interlayer_connections, self.layer_sizes[:-1], self.layer_sizes[1:]):
-			W[conn] = np.random.uniform(low=-np.sqrt(6./(n_in+n_out)), high=np.sqrt(6./(n_in+n_out)), size=n_in*n_out)
+			W -= W*conn
+			W += conn*np.asarray(
+					self.rng.uniform(
+						low=-np.sqrt(6. / (n_in+n_out)),
+						high=np.sqrt(6. / (n_in+n_out)),
+						size=W.shape))
 										
 		# Zero weight matrix elements where connections do not exist
 		W *= W_mask
@@ -255,8 +262,8 @@ class Network:
 		term1 = torch.unsqueeze(rho(s_clamped_phase), dim=2)@torch.unsqueeze(rho(s_clamped_phase), dim=1)
 		term2 = torch.unsqueeze(rho(s_free_phase), dim=2)@torch.unsqueeze(rho(s_free_phase), dim=1)
 		dW = (1/self.beta)*(term1-term2)
-		dW = torch.mean(dW, dim=0).unsqueeze(0)
 		dW *= self.W_mask
+		dW = torch.mean(dW, dim=0).unsqueeze(0)
 		return dW
 		
 	def __calculate_bias_update(self, s_free_phase, s_clamped_phase):
@@ -294,7 +301,8 @@ class Network:
 				layer_corrections.append(float(correction.cpu()))
 		if type(self.learning_rate) == list:
 			for lr, conn in zip(self.learning_rate, self.interlayer_connections):
-				dW[conn] *= lr
+				dW[conn!=0] *= lr
+			dW = dW.tril(diagonal=-1) + dW.tril(diagonal=-1).transpose(1, 2)
 		else:
 			dW *= self.learning_rate
 		self.W += dW
@@ -370,6 +378,8 @@ class Network:
 			if self.pparts:
 				self.__use_persistant_particle(index)
 			self.__evolve_to_equilibrium('free')
+			if self.pparts:
+				self.__update_persistant_particle(index)
 			test_error += int(torch.eq(torch.argmax(self.s[:, self.iy], dim=1), torch.argmax(y, dim=1)).sum())
 		test_error = 1-(test_error/self.n_test)
 		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))

@@ -3,7 +3,7 @@ import os
 import torch
 
 settings_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'settings')
-settings_name = 'settings.pickle'
+settings_name = 'sw_1e5conns_replace.pickle'
 
 topology = \
 {
@@ -44,7 +44,7 @@ hyperparameters = \
 }
 configuration = \
 {
-	'epochs':                      1,
+	'epochs':                      200,
 	  # Number of epochs for which to train the network.
 	'batch size':                  20,
 	  # Number of input-output pairs with which network will train simultaneously during each batch.
@@ -62,7 +62,7 @@ configuration = \
 	  #   contained in the dataset.
 	'enable persistent particles': True,
 	  # Whether or not to use persistent particles on both training and test batches.
-    'per-layer measurement period': 500
+    	'per-layer measurement period': 500
 }
 dataset = 'MNIST'
 # Which dataset to train network on.
@@ -81,3 +81,5 @@ Settings = \
 
 with open(os.path.join(settings_path, settings_name), 'wb') as F:
 	pickle.dump(Settings, F)
+
+print(settings_name)
