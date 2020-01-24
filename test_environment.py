@@ -10,4 +10,4 @@ try:
 	import eqp.datasets
 	print('Environment setup successful')
 except:
-	print('Environment setup unsuccessful')
+	print('Environment setup not successful')

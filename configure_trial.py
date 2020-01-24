@@ -3,11 +3,11 @@ import os
 import torch
 
 settings_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'settings')
-settings_name = 'sw_1e5conns_replace.pickle'
+settings_name = 'sw_sanitycheck.pickle'
 
 topology = \
 {
-	'layer sizes':                 [28**2, 500, 500, 500, 10],
+	'layer sizes':                 [28**2, 500, 500,500, 10],
 	  # Number of neurons in each layer, from input to output.
 	'type':                        'smallworld replace',
   	  # Which network topology to use.
@@ -19,7 +19,7 @@ topology = \
 	  #   'smallworld replace': base topology created with full connectivity between adjacent
 	  #     layers and full connectivity within layers. Existing connections are then replaced
 	  #     by random bypass connections.
-	'bypass connections':          100000,
+	'bypass connections':          0,
 	  # How many random bypass connections to create. Ignored if 'type' is 'layered'.
 	'bypass magnitude':            .05
 	  # Intralayer connections and bypass connections will be drawn from 
@@ -28,7 +28,7 @@ topology = \
 }
 hyperparameters = \
 {
-	'learning rate':               .01,
+	'learning rate':               .02,
 	  # Extent to which network will update its weights and biases after each batch.
 	  #   Can be a scalar, in which case the entire network will have that learning rate, or a 
 	  #   list of scalars of length one less than the number of layers, in which case the parameters
@@ -44,7 +44,7 @@ hyperparameters = \
 }
 configuration = \
 {
-	'epochs':                      200,
+	'epochs':                      300,
 	  # Number of epochs for which to train the network.
 	'batch size':                  20,
 	  # Number of input-output pairs with which network will train simultaneously during each batch.
