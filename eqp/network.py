@@ -34,7 +34,7 @@ class Network:
 		print('Beginning network initialization.')
 		print('Initializing dataset.')
 		t_0 = time.time()
-		if dataset==eqp.datasets.Linear:
+		if dataset==datasets.Linear:
 			self.dataset =   dataset(self.batch_size, self.device, self.n_train, self.n_test, self.layer_sizes[0], self.layer_sizes[-1])
 		else:
 			self.dataset =   dataset(self.batch_size, self.device, self.n_train, self.n_test)
@@ -385,3 +385,20 @@ class Network:
 		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
 		print('\tTest error: %.04f%%.'%(100*test_error))
 		return test_error
+		
+	def calculate_training_cost_function(self):
+		print('Evaluating cost function.')
+		t_0 = time.time()
+		c = 0
+		for batch in range(int(self.n_train/self.batch_size)):
+			[x, y], index = self.dataset.get_training_batch()
+			self.__set_x_state(x)
+			if self.pparts:
+				self.use_persistent_particle(index)
+			self.__evolve_to_equilibrium('free')
+			c += torch.norm(y-self.s[:, self.iy])
+		c /= int(self.n_train/self.batch_size)
+		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
+		print('\tAverage cost function in training dataset: %.04f%%.'%(c))
+		return c
+			
