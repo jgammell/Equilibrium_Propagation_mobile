@@ -214,7 +214,7 @@ class Network:
 		self.W_mask = torch.from_numpy(W_mask).float().to(self.device).unsqueeze(0)
 		self.interlayer_connections = [torch.from_numpy(conn).float().to(self.device).unsqueeze(0)
 									   for conn in interlayer_connections]
-		assert self.W.norm() == (self.W*self.W_mask).norm()
+		assert (self.W - (self.W*self.W_mask)).norm() == 0
 		assert (self.W - (self.W.tril() + self.W.tril().transpose(1,2))).norm() == 0
 		assert self.W.norm() != 0
 	
@@ -294,11 +294,6 @@ class Network:
 		
 		# Apply weight update
 		dW = self.__calculate_weight_update(s_free_phase, s_clamped_phase)
-		if measure_perlayer:
-			layer_corrections = []
-			for conn in self.interlayer_connections:
-				correction = torch.norm((dW*conn)/torch.sqrt(torch.norm(conn, p=1)))
-				layer_corrections.append(float(correction.cpu()))
 		if type(self.learning_rate) == list:
 			for lr, conn in zip(self.learning_rate, self.interlayer_connections):
 				dW[conn!=0] *= lr
@@ -306,6 +301,11 @@ class Network:
 		else:
 			dW *= self.learning_rate
 		self.W += dW
+		if measure_perlayer:
+			layer_corrections = []
+			for conn in self.interlayer_connections:
+				correction = torch.norm((dW*conn)/torch.sqrt(torch.norm(conn, p=1)))
+				layer_corrections.append(float(correction.cpu()))
 		
 		# Apply bias update
 		dB = self.__calculate_bias_update(s_free_phase, s_clamped_phase)
@@ -346,6 +346,7 @@ class Network:
 				for pair in range(len(layer_corrections)):
 					perlayer_corrections[pair].append(layer_corrections[pair])
 		assert torch.norm(self.W - (torch.tril(self.W, diagonal=-1) + torch.tril(self.W, diagonal=-1).transpose(1, 2))) == 0
+		assert torch.norm(self.W - (self.W*self.W_mask)) == 0
 		print('\tDone. Time taken: %s.'%(self.__format_time(time.time()-t_0)))
 		if measure_classerror:
 			training_error = 1-(training_error/self.n_train)
