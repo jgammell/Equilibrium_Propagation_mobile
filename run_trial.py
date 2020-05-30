@@ -52,6 +52,6 @@ for settings_name in sys.argv[2:]:
 
 	dt = datetime.datetime.now()
 	results_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results')
-	results_name = 'Results_%d-%d-%d_%d:%d:%d.pickle'%(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+	results_name = 'Results_%d-%d-%d_%d-%d-%d.pickle'%(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 	with open(os.path.join(results_path, results_name), 'wb') as F:
 		pickle.dump(Results, F)
